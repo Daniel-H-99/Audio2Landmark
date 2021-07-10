@@ -22,6 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='a2l/configs.yaml', help='Path to the config file.')
 parser.add_argument('--output_path', type=str, default='a2l', help="outputs path")
 parser.add_argument("--resume", action="store_true")
+parser.add_argument("--bfm", action="store_true")
 opts = parser.parse_args()
 
 cudnn.benchmark = True
@@ -31,12 +32,12 @@ config = get_config(opts.config)
 max_iter = config['max_iter']
 
 
-trainer = LipTrainer(config)
+trainer = LipTrainer(config, bfm=opts.bfm)
 
 trainer.to(config['device'])
 
-train_loader = get_data_loader_list(config, split='train')
-eval_loader = get_data_loader_list(config, split='eval')
+train_loader = get_data_loader_list(config, split='train', bfm=opts.bfm)
+eval_loader = get_data_loader_list(config, split='eval', bfm=opts.bfm)
 
 model_name = config['trainer']
 # train_writer = tensorboardX.SummaryWriter(os.path.join(opts.output_path + "/logs", model_name))
@@ -61,7 +62,7 @@ while True:
         # Main training code
         loss_pca = trainer.trainer_update(audio, parameter)
 #         torch.cuda.synchronize()
-
+        torch.cuda.empty_cache()
         # Dump training stats in log file
         if (iterations + 1) % config['log_iter'] == 0:
             log = "Iteration: %08d/%08d, Loss_exc: %f" % (iterations + 1, max_iter, loss_pca)
@@ -76,15 +77,17 @@ while True:
         if (iterations + 1) % config['eval_iter'] == 0:
             loss_eval = 0
             cnt = 0
-            for id, data in enumerate(eval_loader):
-                audio = data[0].to(config['device']).detach()
-                parameter = data[1].to(config['device']).detach()
+            with torch.no_grad():
+                for id, data in enumerate(eval_loader):
+                    audio = data[0].to(config['device']).detach()
+                    parameter = data[1].to(config['device']).detach()
 
-                # Main training code
-                preds = trainer.forward(audio)
-                items = len(data[0])
-                loss_eval += items * trainer.criterion_pca(preds, parameter)
-                cnt += items
+                    # Main training code
+                    preds = trainer.forward(audio)
+                    items = len(data[0])
+                    loss_eval += items * trainer.criterion_pca(preds, parameter).item()
+                    cnt += items
+                    torch.cuda.empty_cache()
                 
             loss_eval /= cnt
             log = "[Eval] Iteration: %08d/%08d, Loss_Eval: %f" % (iterations + 1, max_iter, loss_eval)

@@ -9,13 +9,14 @@ eval_iter: 1000
 
 # optimization options
 max_iter: 1000000              # maximum number of training iterations
-batch_size: 64                # batch size
+train_batch_size: 64                # batch size
+eval_batch_size: 32
 momentum: 0.9                 # momentum
 weight_decay: 0.0       # weight decay
 beta1: 0.5                    # Adam parameter
 beta2: 0.999                  # Adam parameter
 init: orthogonal                 # initialization [gaussian/kaiming/xavier/orthogonal]
-lr: 0.01                     # initial learning rate
+lr: 0.01                    # initial learning rate
 lr_policy: step               # learning rate scheduler
 gamma: 0.5                    # how much to decay learning rate
 step_size: 10000              # how often to decay learning rate
@@ -23,7 +24,8 @@ purpose: AT-2                 # attention mode for video emoiton recognition
 
 # model options
 trainer: LipTrainer           #trainer type
-device: cuda:3
+device: cuda:0
+load_from_wav2lip: false
 EMCINT:
   in_channel: 7               # flatten the shape of expression coefficients map 29*7
   mid_channel: 18             # mid_channel 29*3
@@ -37,8 +39,8 @@ lstm:
 audio_dim: 80                                            # size of mfcc
 pca_dim: 20                                               # size of parameter
 num_workers: 4                                           # number of data loading threads
-train_root: datasets/face/train                               # dataset folder location
-eval_root: datasets/face/eval
+train_root: ../datasets/train                               # dataset folder location
+eval_root: ../datasets/eval
 flist:
   audio_list_test: ./lists/audio_list_test.txt
   audio_list: ./lists/audio_list.txt
@@ -47,7 +49,7 @@ flist:
 audio_load_size: 44100                                   # 1 second sliding window(fs = 44100Hz)
 
 # test options
-test_root: datasets/face/test
+test_root: ../datasets/test
 test_ldmk: ./rawKp.pickle
 pca_path: ./PCA.pickle
 test_batch_size: 1

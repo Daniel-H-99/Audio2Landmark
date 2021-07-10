@@ -229,8 +229,9 @@ def draw_heatmap_from_78_landmark(landmark, width, height):
 
 def drawLips(keypoints, new_img, c = (255, 255, 255), th = 1):
 
-	keypoints = np.float32(keypoints)
-
+# 	keypoints = np.int(keypoints)
+	keypoints = keypoints.astype(int)
+# 	print(keypoints)
 	for i in range(48, 59):
 		cv2.line(new_img, tuple(keypoints[i]), tuple(keypoints[i+1]), color=c, thickness=th)
 	cv2.line(new_img, tuple(keypoints[48]), tuple(keypoints[59]), color=c, thickness=th)
@@ -248,4 +249,6 @@ def getOriginalKeypoints(kp_features_mouth, N, tilt, mean):
 	x_dash, y_dash = x*c + y*s, -x*s + y*c
 	kp_tilt = np.hstack((x_dash.reshape((-1,1)), y_dash.reshape((-1, 1))))
 	kp = kp_tilt + mean
+	kp = kp.astype('int')
+#     print(kp)
 	return kp

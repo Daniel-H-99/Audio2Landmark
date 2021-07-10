@@ -497,7 +497,7 @@ class Audio2Exp(nn.Module):
         super(Audio2Exp, self).__init__()
         self.input_dim = params['audio_dim']
         self.output_dim = params['pca_dim']
-        self.batch_size = params['batch_size'] if is_train else params['test_batch_size']
+        self.batch_size = params['train_batch_size'] if is_train else params['test_batch_size']
         self.init_hidden(params)
         # construct model
         self.lstm = nn.LSTM(self.input_dim, params['lstm']['node_dim'], params['lstm']['layer_num'], batch_first=True)

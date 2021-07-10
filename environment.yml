@@ -1,4 +1,4 @@
-name: v2v
+name: audio2landmark
 channels:
   - conda-forge
   - defaults
@@ -54,4 +54,4 @@ dependencies:
     - tqdm==4.19.9
     - typing-extensions==3.7.4.3
     - urllib3==1.26.3
-prefix: /home/server25/anaconda3/envs/v2v
+prefix: /home/server25/anaconda3/envs/audio2landmark

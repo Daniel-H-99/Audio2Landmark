@@ -4,21 +4,28 @@ import torch.nn.functional as F
 import os.path
 from utils import OneHot, weights_init, get_model_list, get_scheduler, Dict_Unite
 from networks import Audio2Exp
+from encoder import Encoder
 
 
 
 class LipTrainer(nn.Module):
-    def __init__(self, param, is_train=True):
+    def __init__(self, param, bfm=False):
         super(LipTrainer, self).__init__()
         lr = param['lr']
         # Initiate the networks
 
-        self.audio2exp = Audio2Exp(param, is_train)
+        self.audio2exp = Encoder(output_dim = 64 if bfm else param['pca_dim'])
 
+        if param['load_from_wav2lip']:
+            self.audio2exp.encoder.load_state_dict(torch.load('a2l/audio_encoder.pth'))
+#         self.audio2exp = Audio2Exp(param)
         a2e_params = list(self.audio2exp.parameters())
 
         self.a2e_opt = torch.optim.Adam([p for p in a2e_params if p.requires_grad], lr=lr,
                                         betas=(param['beta1'], param['beta2']), weight_decay=param['weight_decay'])
+
+#         self.a2e_opt = torch.optim.SGD([p for p in a2e_params if p.requires_grad], lr=0.003,
+#                                         weight_decay=param['weight_decay'])
 
         self.a2e_scheduler = get_scheduler(self.a2e_opt, param)
 
@@ -38,7 +45,6 @@ class LipTrainer(nn.Module):
 
     def trainer_update(self, audio, parameter):
         self.a2e_opt.zero_grad()
-
         pca_pred = self.audio2exp(audio)
         self.loss_exc = self.criterion_pca(pca_pred, parameter)
         self.loss_exc.backward()

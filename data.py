@@ -210,6 +210,33 @@ class A2LDataset(data.Dataset):
     def __len__(self):
         return len(self.config)
         
+class A2BDataset(data.Dataset):
+    def __init__(self, config, split='train', audio_transform=None, img_transform=None):
+        super(A2BDataset, self).__init__()
+        self.split = split
+        self.root = config['{}_root'.format(split)] + '_b'
+        self.config = default_config_reader(os.path.join(self.root, 'config.txt'))
+        self.bfms = default_pickle_loader(os.path.join(self.root, 'bfms.pickle'))
+        self.audio_transform = audio_transform
+        self.img_transform = img_transform
+        print(len(self.config))
+        
+    def __getitem__(self, index):
+        vid, index = self.config[index].split('/')
+        audio_path = os.path.join(self.root, vid, 'audio', index + '.pickle')
+        audio = default_pickle_loader(audio_path)
+        if self.audio_transform is not None:
+            audio = self.audio_transform(audio)
+        if self.split == 'test':
+            return audio
+        
+        bfm = self.bfms[vid][index].reshape(-1)
+#         print(vid, index)
+#         print(audio.shape)
+        return audio, bfm
+
+    def __len__(self):
+        return len(self.config)
         
 class SMEDataset(data.Dataset):
     def __init__(self, root, flist, audio_transform = None, config = None, pickle_loader =default_pickle_loader,
@@ -338,14 +365,14 @@ class SMEDtestset(data.Dataset):
 #                             num_workers=config['num_workers'])
 #     return loader
 
-def get_data_loader_list(config, split='train'):
+def get_data_loader_list(config, split='train', bfm=False):
     assert split in ['train', 'eval', 'test']
-    batch_size = config['test_batch_size'] if split == 'test' else config['batch_size']
+    batch_size = config['{}_batch_size'.format(split)]
     transform_list = [transforms.Lambda(lambda x: torch.tensor(x, dtype=torch.float32))]
     audio_transform = transforms.Compose(transform_list)
     
-    dataset = A2LDataset(config, split,
-                            audio_transform=audio_transform)
+    dataset = A2BDataset(config, split,
+                            audio_transform=audio_transform) if bfm else A2LDataset(config, split, audio_transform=audio_transform)
     loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=split != 'test', drop_last=split != 'test',
                         num_workers=config['num_workers'])
     print("data size: {}".format(len(loader)))
