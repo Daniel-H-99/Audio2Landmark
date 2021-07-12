@@ -4,6 +4,7 @@ import argparse
 from torch.autograd import Variable
 from trainer import LipTrainer
 import torch.backends.cudnn as cudnn
+import torchvision.transforms as transforms
 import torch
 import pickle as pkl
 import numpy as np
@@ -20,12 +21,12 @@ import pickle
 import logging
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, default='a2l/configs.yaml', help='Path to the config file.')
-parser.add_argument('--output_path', type=str, default='a2l', help="outputs path")
-parser.add_argument('--checkpoint_lstm', type=str, default='a2l/outputs/LipTrainer/audio2exp_best.pt', help='Path to the checkpoint file')
+parser.add_argument('--config', type=str, default='configs.yaml', help='Path to the config file.')
+parser.add_argument('--output_path', type=str, default='.', help="outputs path")
+parser.add_argument('--checkpoint_lstm', type=str, default='outputs/LipTrainer/audio2exp_best.pt', help='Path to the checkpoint file')
 parser.add_argument("--resume", action="store_true")
+parser.add_argument("--bfm", action='store_true')
 parser.add_argument("--tag", type=str, default='test', help="tag for experiment")
-parser.add_argument("--bfm", action="store_true")
 opts = parser.parse_args()
 
 cudnn.benchmark = True
@@ -43,9 +44,8 @@ checkpoint_directory, image_directory, landmark_directory = prepare_sub_folder(o
 # landmark_directory = 'output_bfms'
 shutil.copy(opts.config, os.path.join(output_directory, 'config.yaml'))
 
-if not opts.bfm:
-    f = open(os.path.join(root_dir, config['pca_path']), 'rb')
-    pca = pickle.load(f)
+f = open(os.path.join(root_dir, config['pca_path']), 'rb')
+pca = pickle.load(f)
 
 trainer = LipTrainer(config, bfm=opts.bfm)
 trainer.to(config['device'])

@@ -40,7 +40,7 @@ audio_dim: 80                                            # size of mfcc
 pca_dim: 20                                               # size of parameter
 num_workers: 4                                           # number of data loading threads
 train_root: ../datasets/train                               # dataset folder location
-eval_root: ../datasets/eval
+eval_root: ../datasets/test
 flist:
   audio_list_test: ./lists/audio_list_test.txt
   audio_list: ./lists/audio_list.txt
