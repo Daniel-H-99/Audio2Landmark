@@ -1,4 +1,4 @@
-from utils import prepare_sub_folder, write_loss, write_log, get_config, Timer, draw_heatmap_from_78_landmark, save_image, drawLips, getOriginalKeypoints
+from utils import prepare_sub_folder, write_loss, write_log, get_config, Timer, draw_heatmap_from_78_landmark, save_image, drawLips, getOriginalKeypoints, fit_lip_to_face, normalize_lip
 from data import get_data_loader_list
 import argparse
 from torch.autograd import Variable
@@ -9,6 +9,8 @@ import torch
 import pickle as pkl
 import numpy as np
 import cv2
+from tqdm import tqdm
+
 try:
     from itertools import izip as zip
 except ImportError: # will be 3.x series
@@ -23,7 +25,7 @@ import logging
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='configs.yaml', help='Path to the config file.')
 parser.add_argument('--output_path', type=str, default='.', help="outputs path")
-parser.add_argument('--checkpoint_lstm', type=str, default='outputs/LipTrainer/audio2exp_best.pt', help='Path to the checkpoint file')
+parser.add_argument('--checkpoint_lstm', type=str, default='outputs/LipTrainer/audio2exp_00020000.pt', help='Path to the checkpoint file')
 parser.add_argument("--resume", action="store_true")
 parser.add_argument("--bfm", action='store_true')
 parser.add_argument("--tag", type=str, default='test', help="tag for experiment")
@@ -61,7 +63,7 @@ cnt = 0
 if opts.bfm:
     output_bfms = []
     
-for id, data in enumerate(test_loader):
+for id, data in enumerate(tqdm(test_loader)):
     if opts.bfm:
         audio = data.to(config['device']).detach()
     if not opts.bfm:
@@ -77,15 +79,19 @@ for id, data in enumerate(test_loader):
     # Main testing code
     with torch.no_grad():
         if not opts.bfm:
-            reduced_kp = trainer.forward(audio)
+            preds = trainer.forward(audio)
+            # print("prediction shape: {}".format(preds.shape))
+            reduced_kp, scale_coeff = preds[:, :-2], preds[:, -2:]
             normed_kp = pca.inverse_transform(reduced_kp.detach().cpu().numpy())[0]
-            fake_kp = getOriginalKeypoints(normed_kp, N, theta, mean)
-            all_ldmk[48:68] = fake_kp
+            scale_coeff = scale_coeff[0].detach().cpu().numpy()
+            normed_lip = normalize_lip(N * normed_kp.reshape(2, -1).T)
+            recon_ldmk = fit_lip_to_face(all_ldmk, normed_lip, scale_coeff, theta, mean)
+            # fake_kp = getOriginalKeypoints(normed_kp, N, theta, mean)
 
             save_name = os.path.join(landmark_directory, frame_id + '.txt')
-            np.savetxt(save_name, all_ldmk, fmt='%d', delimiter=',')
+            np.savetxt(save_name, recon_ldmk, fmt='%d', delimiter=',')
 
-            img = drawLips(all_ldmk, img)
+            img = drawLips(recon_ldmk, img)
             cv2.imwrite(os.path.join(image_directory, frame_id + '.png'), img)
 
             loss_test += items * trainer.criterion_pca(reduced_kp, target_kp).to('cpu')

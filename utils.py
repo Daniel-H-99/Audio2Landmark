@@ -29,6 +29,34 @@ import cv2
 # get_scheduler
 # weights_init
 
+def fit_lip_to_face(kp, normed_lip, scale_coeff, tilt, mean):
+    ref_x = np.linalg.norm(kp[45] - kp[36], ord=2, axis=0)
+    ref_y = np.linalg.norm(kp[30] - kp[27], ord=2, axis=0)
+    scale = np.array([ref_x, ref_y]) * scale_coeff
+    kp_dn = normed_lip * scale[np.newaxis]
+    x, y = kp_dn[:, 0], kp_dn[:, 1]
+    c, s = np.cos(tilt), np.sin(tilt)
+    x_dash, y_dash = x*c + y*s, -x*s + y*c
+    kp_tilt = np.hstack((x_dash.reshape((-1,1)), y_dash.reshape((-1, 1))))
+    lip = kp_tilt + mean
+    lip = lip.astype('int')
+    new_kp = np.concatenate([kp[:48], lip], axis=0)
+    
+    return new_kp
+
+def extract_scale_coeff(kp):
+    ref_x = np.linalg.norm(kp[45] - kp[36], ord=2, axis=0)
+    ref_y = np.linalg.norm(kp[30] - kp[27], ord=2, axis=0)
+    target_x = np.linalg.norm(kp[54] -kp[48], ord=2, axis=0)
+    target_y = np.linalg.norm(kp[57] - kp[51], ord=2, axis=0)
+    scale = np.array([target_x / ref_x, target_y / ref_y])
+    return scale
+
+def normalize_lip(lip):
+    ref_x = np.linalg.norm(lip[6] - lip[0], ord=1, axis=0)
+    ref_y = np.linalg.norm(lip[9] - lip[3], ord=1, axis=0)
+    return lip / np.array([ref_x, ref_y])[np.newaxis]
+
 def mfcc_from_audio(audio_path, n_mfcc, hop_time, window_time, norm=True, eps=0.000001):
     audio, sr = librosa.load(audio_path, sr=None)
     hop_length = int((sr * hop_time) / 1000)
@@ -113,7 +141,7 @@ def get_model_list(dirname, key):
     if os.path.exists(dirname) is False:
         return None
     gen_models = [os.path.join(dirname, f) for f in os.listdir(dirname) if
-                  os.path.isfile(os.path.join(dirname, f)) and key in f and ".pt" in f]
+                  os.path.isfile(os.path.join(dirname, f)) and key in f and ".pt" in f and not 'best' in f]
     if gen_models is None:
         return None
     gen_models.sort()
@@ -230,17 +258,19 @@ def draw_heatmap_from_78_landmark(landmark, width, height):
 def drawLips(keypoints, new_img, c = (255, 255, 255), th = 1):
 
 # 	keypoints = np.int(keypoints)
-	keypoints = keypoints.astype(int)
+    keypoints = keypoints.astype(int)
 # 	print(keypoints)
-	for i in range(48, 59):
-		cv2.line(new_img, tuple(keypoints[i]), tuple(keypoints[i+1]), color=c, thickness=th)
-	cv2.line(new_img, tuple(keypoints[48]), tuple(keypoints[59]), color=c, thickness=th)
-	cv2.line(new_img, tuple(keypoints[48]), tuple(keypoints[60]), color=c, thickness=th)
-	cv2.line(new_img, tuple(keypoints[54]), tuple(keypoints[64]), color=c, thickness=th)
-	cv2.line(new_img, tuple(keypoints[67]), tuple(keypoints[60]), color=c, thickness=th)
-	for i in range(60, 67):
-		cv2.line(new_img, tuple(keypoints[i]), tuple(keypoints[i+1]), color=c, thickness=th)
-	return new_img
+	# for i in range(48, 59):
+	# 	cv2.line(new_img, tuple(keypoints[i]), tuple(keypoints[i+1]), color=c, thickness=th)
+	# cv2.line(new_img, tuple(keypoints[48]), tuple(keypoints[59]), color=c, thickness=th)
+	# cv2.line(new_img, tuple(keypoints[48]), tuple(keypoints[60]), color=c, thickness=th)
+	# cv2.line(new_img, tuple(keypoints[54]), tuple(keypoints[64]), color=c, thickness=th)
+	# cv2.line(new_img, tuple(keypoints[67]), tuple(keypoints[60]), color=c, thickness=th)
+	# for i in range(60, 67):
+	# 	cv2.line(new_img, tuple(keypoints[i]), tuple(keypoints[i+1]), color=c, thickness=th)
+    cv2.fillPoly(new_img, [keypoints[48:60]], color=(255, 255, 255))
+    cv2.fillPoly(new_img, [keypoints[60:68]], color=(0, 0, 0))
+    return new_img
 
 def getOriginalKeypoints(kp_features_mouth, N, tilt, mean):
 	kp_dn = N * kp_features_mouth

@@ -3,3 +3,7 @@ logs
 .ipynb_checkpoints
 __pycache__/
 *.pth
+*.mp4
+*.wav
+*.mp3
+

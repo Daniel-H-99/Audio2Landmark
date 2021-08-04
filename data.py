@@ -13,7 +13,7 @@ import random
 import pickle
 from PIL import Image
 import cv2
-
+import utils
 
 
 def path_extractor(name): #JK_a01_000.jpeg
@@ -189,9 +189,18 @@ class A2LDataset(data.Dataset):
         self.landmarks = default_pickle_loader(os.path.join(self.root, 'PCA_reducedKp.pickle'))
         self.audio_transform = audio_transform
         self.img_transform = img_transform
-        if split == 'test':
-            self.rawKp = default_pickle_loader(os.path.join(self.root, 'rawKp.pickle'))
+        self.rawKp = default_pickle_loader(os.path.join(self.root, 'rawKp.pickle'))
+
+        # vid, index = self.config[0].split('/')
+        # N = 0
+        # cnt = 0
+        # for k in self.rawKp[vid].keys():
+        #     N += self.rawKp[vid][k][1]
+        #     cnt += 1
+        # self.N = N / cnt
+
         print(len(self.config))
+        
     def __getitem__(self, index):
         vid, index = self.config[index].split('/')
         audio_path = os.path.join(self.root, vid, 'audio', '{:05d}'.format(int(index) - 1) + '.pickle')
@@ -201,9 +210,12 @@ class A2LDataset(data.Dataset):
         lm = self.landmarks[vid][index].reshape(-1)
 #         print(vid, index)
 #         print(audio.shape)
-        if self.split != 'test':
-            return audio, lm
         _, N, theta, mean, _, all_kp = self.rawKp[vid][index]
+
+        if self.split != 'test':
+            scale_coeff = utils.extract_scale_coeff(all_kp)
+            # print("scale coeff: {}".format(scale_coeff))
+            return audio, np.concatenate([lm, scale_coeff], axis=0)
         img_path = os.path.join(self.root, vid, 'img', index + '.png')
         img = cv2.imread(img_path)
         return audio, lm, N, theta, mean, all_kp, index, img
@@ -236,7 +248,7 @@ class A2BDataset(data.Dataset):
         return audio, bfm
 
     def __len__(self):
-        return len(self.config)
+        return len(self.config) * 30
         
 class SMEDataset(data.Dataset):
     def __init__(self, root, flist, audio_transform = None, config = None, pickle_loader =default_pickle_loader,
@@ -269,7 +281,7 @@ class SMEDataset(data.Dataset):
         return {'AU':audio, 'PM':landmark}
 
     def __len__(self):
-        return len(self.audio_data)
+        return len(self.audio_data) * 300
 
 
 class SMEDtestset(data.Dataset):
@@ -305,7 +317,7 @@ class SMEDtestset(data.Dataset):
         return {'AU':audio, 'IN':image_name}
 
     def __len__(self):
-        return len(self.audio_data)
+        return len(self.audio_data) * 300
 
 
 # class SaveeTestDataset(data.Dataset):
