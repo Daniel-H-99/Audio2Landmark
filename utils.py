@@ -29,6 +29,24 @@ import cv2
 # get_scheduler
 # weights_init
 
+
+def recon_lip(params):
+    ref_indice = np.array([3] * 4 + [9] * 3 + [14] * 3 + [18] * 2)
+    rel_indice = list(range(4)) + list(range(-2, 1)) + list(range(3)) + list(range(-1, 1))
+
+    lip = [-1] * 22
+    for i in range(len(params) - 2):
+        param = params[i]
+        ref_index = ref_indice[i]
+        rel_index = rel_indice[i]
+        lip[ref_index - rel_index] = np.array([-param[0], param[1]])
+        lip[ref_index + rel_index] = param
+    
+    lip[-2] = params[-2]
+    lip[-1] = params[-1]
+
+    return np.stack(lip, axis=0)
+        
 def fit_lip_to_face(kp, normed_lip, tilt, mean):
     ref =  extract_ref(kp)[0]
     target = np.linalg.norm(normed_lip[-1] - normed_lip[-2], 2)

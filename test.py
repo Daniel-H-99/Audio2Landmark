@@ -1,4 +1,4 @@
-from utils import prepare_sub_folder, write_loss, write_log, get_config, Timer, draw_heatmap_from_78_landmark, save_image, drawLips, getOriginalKeypoints, fit_lip_to_face, normalize_lip
+from utils import prepare_sub_folder, recon_lip, write_loss, write_log, get_config, Timer, draw_heatmap_from_78_landmark, save_image, drawLips, getOriginalKeypoints, fit_lip_to_face, normalize_lip
 from data import get_data_loader_list
 import argparse
 from torch.autograd import Variable
@@ -85,7 +85,9 @@ for id, data in enumerate(tqdm(test_loader)):
             normed_kp = pca.inverse_transform(preds.detach().cpu().numpy())[0]
             # scale_coeff = scale_coeff[0].detach().cpu().numpy()
             # normed_lip = normalize_lip(N * normed_kp.reshape(2, -1).T)
-            recon_ldmk = fit_lip_to_face(all_ldmk, normed_kp.reshape(2, -1).T, theta, mean)
+            normed_lip = recon_lip(normed_kp.reshape(2, -1).T)
+            # print(normed_lip.shape)
+            recon_ldmk = fit_lip_to_face(all_ldmk, normed_lip, theta, mean)
             # fake_kp = getOriginalKeypoints(normed_kp, N, theta, mean)
 
             save_name = os.path.join(landmark_directory, frame_id + '.txt')

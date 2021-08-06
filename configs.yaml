@@ -26,7 +26,7 @@ purpose: AT-2                 # attention mode for video emoiton recognition
 trainer: LipTrainer           #trainer type
 device: cuda:0
 load_from_wav2lip: false
-momentum_weight: 0.00001
+momentum_weight: 0.00005
 EMCINT:
   in_channel: 7               # flatten the shape of expression coefficients map 29*7
   mid_channel: 18             # mid_channel 29*3
@@ -38,7 +38,7 @@ lstm:
 
 # data options
 audio_dim: 80                                            # size of mfcc
-pca_dim: 20                                               # size of parameter
+pca_dim: 16                                               # size of parameter
 num_workers: 4                                           # number of data loading threads
 train_root: ../datasets/train                               # dataset folder location
 eval_root: ../datasets/test
@@ -51,7 +51,7 @@ flist:
 audio_load_size: 44100                                   # 1 second sliding window(fs = 44100Hz)
 
 # test options
-test_root: ../datasets/test_8_1
+test_root: ../datasets/test
 test_ldmk: ./rawKp.pickle
 pca_path: ./PCA.pickle
 test_batch_size: 1
