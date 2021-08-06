@@ -52,13 +52,14 @@ iterations = trainer.resume(checkpoint_directory, param=config) if opts.resume e
 
 min_loss = 10000000
 
+prev = None
 while True:
     for id, data in enumerate(train_loader):
         trainer.train()
         trainer.update_learning_rate()
-        audio = data[0].to(config['device']).detach()
-        parameter = data[1].to(config['device']).detach()
-
+        audio = data[0].to(config['device']).detach()   # B x T x C x H x W
+        parameter = data[1].to(config['device']).detach()   # B x T x F
+        
         # Main training code
         loss_pca = trainer.trainer_update(audio, parameter)
 #         torch.cuda.synchronize()
@@ -83,9 +84,9 @@ while True:
                     parameter = data[1].to(config['device']).detach()
 
                     # Main training code
-                    preds = trainer.forward(audio)
+                    loss = trainer.check_eval_loss(audio, parameter)
                     items = len(data[0])
-                    loss_eval += items * trainer.criterion_pca(preds, parameter).item()
+                    loss_eval += items * loss
                     cnt += items
                     torch.cuda.empty_cache()
                 

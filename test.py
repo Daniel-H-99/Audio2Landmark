@@ -25,7 +25,7 @@ import logging
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='configs.yaml', help='Path to the config file.')
 parser.add_argument('--output_path', type=str, default='.', help="outputs path")
-parser.add_argument('--checkpoint_lstm', type=str, default='outputs/LipTrainer/audio2exp_00020000.pt', help='Path to the checkpoint file')
+parser.add_argument('--checkpoint_lstm', type=str, default='outputs/LipTrainer/audio2exp_best.pt', help='Path to the checkpoint file')
 parser.add_argument("--resume", action="store_true")
 parser.add_argument("--bfm", action='store_true')
 parser.add_argument("--tag", type=str, default='test', help="tag for experiment")
@@ -71,7 +71,7 @@ for id, data in enumerate(tqdm(test_loader)):
         target_kp = data[1].to(config['device']).detach()
         items = len(audio)
         N = data[2][0]   # (-, N, theta, mean, ...)
-        theta = data[3][0]
+        theta = data[3][0].numpy()
         mean = data[4][0].numpy()
         all_ldmk = data[5][0].numpy()
         frame_id = data[6][0]
@@ -81,11 +81,11 @@ for id, data in enumerate(tqdm(test_loader)):
         if not opts.bfm:
             preds = trainer.forward(audio)
             # print("prediction shape: {}".format(preds.shape))
-            reduced_kp, scale_coeff = preds[:, :-2], preds[:, -2:]
-            normed_kp = pca.inverse_transform(reduced_kp.detach().cpu().numpy())[0]
-            scale_coeff = scale_coeff[0].detach().cpu().numpy()
-            normed_lip = normalize_lip(N * normed_kp.reshape(2, -1).T)
-            recon_ldmk = fit_lip_to_face(all_ldmk, normed_lip, scale_coeff, theta, mean)
+            # reduced_kp, scale_coeff = preds[:, :-2], preds[:, -2:]
+            normed_kp = pca.inverse_transform(preds.detach().cpu().numpy())[0]
+            # scale_coeff = scale_coeff[0].detach().cpu().numpy()
+            # normed_lip = normalize_lip(N * normed_kp.reshape(2, -1).T)
+            recon_ldmk = fit_lip_to_face(all_ldmk, normed_kp.reshape(2, -1).T, theta, mean)
             # fake_kp = getOriginalKeypoints(normed_kp, N, theta, mean)
 
             save_name = os.path.join(landmark_directory, frame_id + '.txt')
@@ -94,7 +94,7 @@ for id, data in enumerate(tqdm(test_loader)):
             img = drawLips(recon_ldmk, img)
             cv2.imwrite(os.path.join(image_directory, frame_id + '.png'), img)
 
-            loss_test += items * trainer.criterion_pca(reduced_kp, target_kp).to('cpu')
+            loss_test += items * trainer.criterion_pca(preds, target_kp).to('cpu')
             cnt += items
         else:
             bfms = trainer.forward(audio).detach().cpu().numpy()

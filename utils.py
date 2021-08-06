@@ -29,11 +29,12 @@ import cv2
 # get_scheduler
 # weights_init
 
-def fit_lip_to_face(kp, normed_lip, scale_coeff, tilt, mean):
-    ref_x = np.linalg.norm(kp[45] - kp[36], ord=2, axis=0)
-    ref_y = np.linalg.norm(kp[30] - kp[27], ord=2, axis=0)
-    scale = np.array([ref_x, ref_y]) * scale_coeff
-    kp_dn = normed_lip * scale[np.newaxis]
+def fit_lip_to_face(kp, normed_lip, tilt, mean):
+    ref =  extract_ref(kp)[0]
+    target = np.linalg.norm(normed_lip[-1] - normed_lip[-2], 2)
+    test = np.linalg.norm(normed_lip[6] - normed_lip[0], 2)
+    scale = ref / target
+    kp_dn = normed_lip[:-2] * scale
     x, y = kp_dn[:, 0], kp_dn[:, 1]
     c, s = np.cos(tilt), np.sin(tilt)
     x_dash, y_dash = x*c + y*s, -x*s + y*c
@@ -43,6 +44,11 @@ def fit_lip_to_face(kp, normed_lip, scale_coeff, tilt, mean):
     new_kp = np.concatenate([kp[:48], lip], axis=0)
     
     return new_kp
+
+def extract_ref(kp):
+    ref_x = np.linalg.norm(kp[45] - kp[36], ord=2, axis=0)
+    ref_y = np.linalg.norm(kp[30] - kp[27], ord=2, axis=0)
+    return np.array([ref_x, ref_y])
 
 def extract_scale_coeff(kp):
     ref_x = np.linalg.norm(kp[45] - kp[36], ord=2, axis=0)

@@ -190,7 +190,7 @@ class A2LDataset(data.Dataset):
         self.audio_transform = audio_transform
         self.img_transform = img_transform
         self.rawKp = default_pickle_loader(os.path.join(self.root, 'rawKp.pickle'))
-
+        self.seq_length = int(config['seq_length'])
         # vid, index = self.config[0].split('/')
         # N = 0
         # cnt = 0
@@ -202,23 +202,56 @@ class A2LDataset(data.Dataset):
         print(len(self.config))
         
     def __getitem__(self, index):
-        vid, index = self.config[index].split('/')
-        audio_path = os.path.join(self.root, vid, 'audio', '{:05d}'.format(int(index) - 1) + '.pickle')
-        audio = default_pickle_loader(audio_path)
-        if self.audio_transform is not None:
-            audio = self.audio_transform(audio)
-        lm = self.landmarks[vid][index].reshape(-1)
-#         print(vid, index)
-#         print(audio.shape)
-        _, N, theta, mean, _, all_kp = self.rawKp[vid][index]
+        _index = index
+        if not 'test' in self.split: 
+            audios = []
+            lms = []
+            vid, index = self.config[_index].split('/')
+            indice = [index]
+            i = self.seq_length
+            while len(indice) < self.seq_length:
+                _index -= self.seq_length - i
+                index = self.config[_index].split('/')[1]
+                indice = [index]
+                for i in range(1, self.seq_length):
+                    if _index + i >= len(self.config):
+                        break
+                    tmp_vid, tmp_index = self.config[_index + i].split('/')
+                    if vid != tmp_vid:
+                        break
+                    else:
+                        indice.append(tmp_index)
+                
 
-        if self.split != 'test':
-            scale_coeff = utils.extract_scale_coeff(all_kp)
+            for index in indice:
+                audio_path = os.path.join(self.root, vid, 'audio', '{:05d}'.format(int(index) - 1) + '.pickle')
+                audio = default_pickle_loader(audio_path)
+                if self.audio_transform is not None:
+                    audio = self.audio_transform(audio)
+                lm = self.landmarks[vid][index].reshape(-1)
+                audios.append(audio)
+                lms.append(lm)
+        #         print(vid, index)
+        #         print(audio.shape)
+
+            audios = np.stack(audios, axis=0)
+            lms = np.stack(lms, axis=0)
+            # scale_coeff = utils.extract_scale_coeff(all_kp)
             # print("scale coeff: {}".format(scale_coeff))
-            return audio, np.concatenate([lm, scale_coeff], axis=0)
-        img_path = os.path.join(self.root, vid, 'img', index + '.png')
-        img = cv2.imread(img_path)
-        return audio, lm, N, theta, mean, all_kp, index, img
+            # return audio, np.concatenate([lm, scale_coeff], axis=0)
+            return audios,lms 
+        else:
+            vid, index = self.config[_index].split('/')
+            audio_path = os.path.join(self.root, vid, 'audio', '{:05d}'.format(int(index) - 1) + '.pickle')
+            audio = default_pickle_loader(audio_path)
+            if self.audio_transform is not None:
+                audio = self.audio_transform(audio)
+            lm = self.landmarks[vid][index].reshape(-1)
+            _, N, theta, mean, _, all_kp = self.rawKp[vid][index]
+            img_path = os.path.join(self.root, vid, 'img', index + '.png')
+            img = cv2.imread(img_path)
+            return audio, lm, N, theta, mean, all_kp, index, img
+            
     def __len__(self):
         return len(self.config)
         

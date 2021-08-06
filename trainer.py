@@ -29,6 +29,7 @@ class LipTrainer(nn.Module):
 
         self.a2e_scheduler = get_scheduler(self.a2e_opt, param)
 
+        self.momentum_weight = param['momentum_weight']
         # Network weight initialization
         self.apply(weights_init(param['init']))
 
@@ -43,10 +44,45 @@ class LipTrainer(nn.Module):
         exp_pred = self.audio2exp(audio)
         return exp_pred
 
+    def check_eval_loss(self, audio, parameter):
+        # change B x T x C x H x W to B x T x C x H x W
+        self.eval()
+
+        with torch.no_grad():
+            b, t, c, h, w = audio.shape
+            audio = audio.view(b*t, c, h, w)
+            parameter = parameter.view(b*t, -1) 
+
+            pca_pred = self.audio2exp(audio)
+            self.loss_exc = self.criterion_pca(pca_pred, parameter)
+            pca_pred = pca_pred.view(b, t, -1)
+            parameter = parameter.view(b, t, -1)
+            momentum_pred = (pca_pred[:, 1:] - pca_pred[:, :-1]).view(b * (t - 1), -1)
+            momentum = (parameter[:, 1:] - parameter[:, :-1]).view(b * (t - 1), -1)
+            # similarity = F.cosine_similarity(momentum_pred, momentum).mean()
+            # self.loss_exc -= self.momentum_weight * similarity
+            self.loss_exc += self.momentum_weight * torch.nn.L1Loss()(momentum_pred, torch.zeros_like(momentum_pred))
+        return self.loss_exc
+
     def trainer_update(self, audio, parameter):
+        # change B x T x C x H x W to B x T x C x H x W
+        self.train()
+
+        b, t, c, h, w = audio.shape
+        audio = audio.view(b*t, c, h, w)
+        parameter = parameter.view(b*t, -1) 
+
         self.a2e_opt.zero_grad()
         pca_pred = self.audio2exp(audio)
         self.loss_exc = self.criterion_pca(pca_pred, parameter)
+        pca_pred = pca_pred.view(b, t, -1)
+        parameter = parameter.view(b, t, -1)
+        momentum_pred = (pca_pred[:, 1:] - pca_pred[:, :-1]).view(b * (t - 1), -1)
+        momentum = (parameter[:, 1:] - parameter[:, :-1]).view(b * (t - 1), -1)
+        # similarity = F.cosine_similarity(momentum_pred, momentum).mean()
+        # self.loss_exc -= self.momentum_weight * similarity
+        # print(momentum_pred.shape)
+        self.loss_exc += self.momentum_weight * torch.nn.L1Loss()(momentum_pred, torch.zeros_like(momentum_pred))
         self.loss_exc.backward()
         self.a2e_opt.step()
 
