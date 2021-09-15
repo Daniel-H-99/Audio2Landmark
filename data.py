@@ -250,7 +250,7 @@ class A2LDataset(data.Dataset):
             _, N, theta, mean, _, all_kp = self.rawKp[vid][index]
             img_path = os.path.join(self.root, vid, 'img', index + '.png')
             img = cv2.imread(img_path)
-            return audio, lm, N, theta, mean, all_kp, index, img
+            return audio, lm, N, theta, mean, all_kp, index, img, vid
             
     def __len__(self):
         return len(self.config)

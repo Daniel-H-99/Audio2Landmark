@@ -25,7 +25,7 @@ import logging
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='configs.yaml', help='Path to the config file.')
 parser.add_argument('--output_path', type=str, default='.', help="outputs path")
-parser.add_argument('--checkpoint_lstm', type=str, default='outputs/LipTrainer/audio2exp_best.pt', help='Path to the checkpoint file')
+parser.add_argument('--checkpoint_lstm', type=str, default='outputs/LipTrainer/audio2exp_eng_best.pt', help='Path to the checkpoint file')
 parser.add_argument("--resume", action="store_true")
 parser.add_argument("--bfm", action='store_true')
 parser.add_argument("--tag", type=str, default='test', help="tag for experiment")
@@ -43,7 +43,7 @@ logging.debug('This message should go to the log file')
 logging.info('So should this')
 output_directory = os.path.join(opts.output_path + "/outputs", model_name + '_' + opts.tag)
 checkpoint_directory, image_directory, landmark_directory = prepare_sub_folder(output_directory, is_test=True)
-# landmark_directory = 'output_bfms'
+landmark_directory = config['test_root']
 shutil.copy(opts.config, os.path.join(output_directory, 'config.yaml'))
 
 f = open(os.path.join(root_dir, config['pca_path']), 'rb')
@@ -76,6 +76,7 @@ for id, data in enumerate(tqdm(test_loader)):
         all_ldmk = data[5][0].numpy()
         frame_id = data[6][0]
         img = data[7][0].numpy()
+        vid_name = data[8][0]
     # Main testing code
     with torch.no_grad():
         if not opts.bfm:
@@ -89,8 +90,9 @@ for id, data in enumerate(tqdm(test_loader)):
             # print(normed_lip.shape)
             recon_ldmk = fit_lip_to_face(all_ldmk, normed_lip, theta, mean)
             # fake_kp = getOriginalKeypoints(normed_kp, N, theta, mean)
-
-            save_name = os.path.join(landmark_directory, frame_id + '.txt')
+            vid_landmark_dir = os.path.join(landmark_directory, vid_name, 'landmarks')
+            os.makedirs(vid_landmark_dir, exist_ok=True)
+            save_name = os.path.join(vid_landmark_dir, frame_id + '.txt')
             np.savetxt(save_name, recon_ldmk, fmt='%d', delimiter=',')
 
             img = drawLips(recon_ldmk, img)
