@@ -49,7 +49,7 @@ shutil.copy(opts.config, os.path.join(output_directory, 'config.yaml'))
 f = open(os.path.join(root_dir, config['pca_path']), 'rb')
 pca = pickle.load(f)
 
-trainer = LipTrainer(config, bfm=opts.bfm)
+trainer = LipTrainer(config, bfm=opts.bfm, is_train=False)
 trainer.to(config['device'])
 state_dict_lstm = torch.load(opts.checkpoint_lstm)
 trainer.audio2exp.load_state_dict(state_dict_lstm['audio2exp'])
@@ -68,6 +68,8 @@ for id, data in enumerate(tqdm(test_loader)):
         audio = data.to(config['device']).detach()
     if not opts.bfm:
         audio = data[0].to(config['device']).detach()
+        b, c, h, w = audio.shape
+        audio = audio.view(b, h, w).transpose(1, 2)
         target_kp = data[1].to(config['device']).detach()
         items = len(audio)
         N = data[2][0]   # (-, N, theta, mean, ...)

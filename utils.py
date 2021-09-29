@@ -48,32 +48,39 @@ def recon_lip(params):
     return np.stack(lip, axis=0)
         
 def fit_lip_to_face(kp, normed_lip, tilt, mean):
+    kp = kp.copy()
     ref =  extract_ref(kp)[0]
     src = np.linalg.norm(normed_lip[-1] - normed_lip[-2], 2)
     scale = ref / src
     scaled_lip = normed_lip * scale
     
+    # tilt = - tilt
     prev_kp = kp - mean
     x, y = prev_kp[:, 0], prev_kp[:, 1]
     c, s = np.cos(-tilt), np.sin(-tilt)
     x_dash, y_dash = x*c + y*s, -x*s + y*c
     prev_kp_tilt = np.hstack((x_dash.reshape((-1,1)), y_dash.reshape((-1, 1))))
     prev_ref_point = (prev_kp_tilt[45] + prev_kp_tilt[36]) / 2
-    delta_x = prev_ref_point[1] - (prev_kp_tilt[51] + prev_kp_tilt[57])[1] / 2
-
+    delta = prev_ref_point - (prev_kp_tilt[51] + prev_kp_tilt[57]) / 2
+    # print("after tilt")
+    # print(prev_ref_point)
+    # print(prev_kp_tilt[51])
+    # print(prev_kp_tilt[57])
+    # print(delta_x)
     scaled_lip, src_pts = scaled_lip[:-2], scaled_lip[-2:]
-    src_pts[:, 1] += delta_x - src_pts.mean(axis=0)[1]
+    src_pts += delta - src_pts.mean(axis=0)
+
  
 
-    d_low = scaled_lip[9] - prev_kp_tilt[57]
-    for i in range(4, 13):
-        if i <= 8:
-            ratio = (prev_kp_tilt[i][1] - prev_kp_tilt[4][1]) / (prev_kp_tilt[8][1] - prev_kp_tilt[4][1])
+    # d_low = scaled_lip[9] - prev_kp_tilt[57]
+    # for i in range(4, 13):
+    #     if i <= 8:
+    #         ratio = (prev_kp_tilt[i][1] - prev_kp_tilt[4][1]) / (prev_kp_tilt[8][1] - prev_kp_tilt[4][1])
 
-        else:
-            ratio = (prev_kp_tilt[12][1] - prev_kp_tilt[i][1]) / (prev_kp_tilt[12][1] - prev_kp_tilt[8][1])
+    #     else:
+    #         ratio = (prev_kp_tilt[12][1] - prev_kp_tilt[i][1]) / (prev_kp_tilt[12][1] - prev_kp_tilt[8][1])
 
-        prev_kp_tilt[i] += ratio * d_low
+    #     prev_kp_tilt[i] += ratio * d_low
 
     kp_dn = np.concatenate([scaled_lip, prev_kp_tilt[4:13], src_pts], axis=0)
 

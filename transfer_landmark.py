@@ -37,13 +37,14 @@ os.makedirs(image_dir, exist_ok=True)
 src_kp = default_pickle_loader(src_kp_path)[src_vid]
 tgt_kp = default_pickle_loader(tgt_kp_path)[tgt_vid]
 
+
 def fid2key(fid):
     return "{:05d}".format(fid + 1)
 
 for i in tqdm(range(len(tgt_kp))):
     key = fid2key(i)
     normed_lip = src_kp[key][0]
-    tmp, N, tilt, mean, _, all_kp = tgt_kp[key]
+    tmp, N, tilt, mean, _, all_kp = tgt_kp[fid2key(50)]
     normed_lip = recon_lip(normed_lip)
     recon_ldmk = fit_lip_to_face(all_kp, normed_lip, tilt, mean)
     # fake_kp = getOriginalKeypoints(normed_kp, N, theta, mean)

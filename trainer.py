@@ -9,12 +9,12 @@ from encoder import Encoder
 
 
 class LipTrainer(nn.Module):
-    def __init__(self, param, bfm=False):
+    def __init__(self, param, bfm=False, is_train = True):
         super(LipTrainer, self).__init__()
         lr = param['lr']
         # Initiate the networks
 
-        self.audio2exp = Encoder(output_dim = 64 if bfm else param['pca_dim'])
+        self.audio2exp = Audio2Exp(param, is_train=is_train)
 
         if param['load_from_wav2lip']:
             self.audio2exp.encoder.load_state_dict(torch.load('a2l/audio_encoder.pth'))
@@ -50,18 +50,18 @@ class LipTrainer(nn.Module):
 
         with torch.no_grad():
             b, t, c, h, w = audio.shape
-            audio = audio.view(b*t, c, h, w)
+            audio = audio.view(b*t, h, w).transpose(1, 2)
             parameter = parameter.view(b*t, -1) 
 
             pca_pred = self.audio2exp(audio)
             self.loss_exc = self.criterion_pca(pca_pred, parameter)
-            pca_pred = pca_pred.view(b, t, -1)
-            parameter = parameter.view(b, t, -1)
-            momentum_pred = (pca_pred[:, 1:] - pca_pred[:, :-1]).view(b * (t - 1), -1)
-            momentum = (parameter[:, 1:] - parameter[:, :-1]).view(b * (t - 1), -1)
+            # pca_pred = pca_pred.view(b, t, -1)
+            # parameter = parameter.view(b, t, -1)
+            # momentum_pred = (pca_pred[:, 1:] - pca_pred[:, :-1]).view(b * (t - 1), -1)
+            # momentum = (parameter[:, 1:] - parameter[:, :-1]).view(b * (t - 1), -1)
             # similarity = F.cosine_similarity(momentum_pred, momentum).mean()
             # self.loss_exc -= self.momentum_weight * similarity
-            self.loss_exc += self.momentum_weight * torch.nn.L1Loss()(momentum_pred, torch.zeros_like(momentum_pred))
+            # self.loss_exc += self.momentum_weight * torch.nn.L1Loss()(momentum_pred, torch.zeros_like(momentum_pred))
         return self.loss_exc
 
     def trainer_update(self, audio, parameter):
@@ -69,20 +69,21 @@ class LipTrainer(nn.Module):
         self.train()
 
         b, t, c, h, w = audio.shape
-        audio = audio.view(b*t, c, h, w)
+        audio = audio.view(b*t, h, w).transpose(1, 2)
+  
         parameter = parameter.view(b*t, -1) 
 
         self.a2e_opt.zero_grad()
         pca_pred = self.audio2exp(audio)
         self.loss_exc = self.criterion_pca(pca_pred, parameter)
-        pca_pred = pca_pred.view(b, t, -1)
-        parameter = parameter.view(b, t, -1)
-        momentum_pred = (pca_pred[:, 1:] - pca_pred[:, :-1]).view(b * (t - 1), -1)
-        momentum = (parameter[:, 1:] - parameter[:, :-1]).view(b * (t - 1), -1)
-        # similarity = F.cosine_similarity(momentum_pred, momentum).mean()
-        # self.loss_exc -= self.momentum_weight * similarity
-        # print(momentum_pred.shape)
-        self.loss_exc += self.momentum_weight * torch.nn.L1Loss()(momentum_pred, torch.zeros_like(momentum_pred))
+        # pca_pred = pca_pred.view(b, t, -1)
+        # parameter = parameter.view(b, t, -1)
+        # momentum_pred = (pca_pred[:, 1:] - pca_pred[:, :-1]).view(b * (t - 1), -1)
+        # momentum = (parameter[:, 1:] - parameter[:, :-1]).view(b * (t - 1), -1)
+        # # similarity = F.cosine_similarity(momentum_pred, momentum).mean()
+        # # self.loss_exc -= self.momentum_weight * similarity
+        # # print(momentum_pred.shape)
+        # self.loss_exc += self.momentum_weight * torch.nn.L1Loss()(momentum_pred, torch.zeros_like(momentum_pred))
         self.loss_exc.backward()
         self.a2e_opt.step()
 

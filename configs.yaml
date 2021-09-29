@@ -10,7 +10,7 @@ eval_iter: 1000
 # optimization options
 max_iter: 1000000              # maximum number of training iterations
 train_batch_size: 64                # batch size
-eval_batch_size: 32
+eval_batch_size: 64
 momentum: 0.9                 # momentum
 weight_decay: 0.0       # weight decay
 beta1: 0.5                    # Adam parameter
@@ -42,7 +42,7 @@ pca_dim: 16                                              # size of parameter
 num_workers: 4                                           # number of data loading threads
 train_root: ../datasets/train                             # dataset folder location
 eval_root: ../datasets/test
-seq_length: 2
+seq_length: 1
 flist:
   audio_list_test: ./lists/audio_list_test.txt
   audio_list: ./lists/audio_list.txt
@@ -53,5 +53,5 @@ audio_load_size: 44100                                   # 1 second sliding wind
 # test options
 test_root: ../datasets/test
 test_ldmk: ./rawKp.pickle
-pca_path: ./PCA.pickle
+pca_path: ../test_k/PCA.pickle
 test_batch_size: 1

@@ -59,7 +59,7 @@ while True:
         trainer.update_learning_rate()
         audio = data[0].to(config['device']).detach()   # B x T x C x H x W
         parameter = data[1].to(config['device']).detach()   # B x T x F
-        print(audio.shape)
+        # print(audio.shape)
     
         # Main training code
         loss_pca = trainer.trainer_update(audio, parameter)

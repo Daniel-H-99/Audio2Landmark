@@ -246,9 +246,11 @@ class A2LDataset(data.Dataset):
             audio = default_pickle_loader(audio_path)
             if self.audio_transform is not None:
                 audio = self.audio_transform(audio)
-            lm = self.landmarks[vid][index].reshape(-1)
-            _, N, theta, mean, _, all_kp = self.rawKp[vid][index]
-            img_path = os.path.join(self.root, vid, 'img', index + '.png')
+            # lm = self.landmarks[vid][index].reshape(-1)
+            lm = self.landmarks[vid]['00051'].reshape(-1)
+            _, N, theta, mean, _, all_kp = self.rawKp[vid]['00051']
+            # img_path = os.path.join(self.root, vid, 'img', index + '.png')
+            img_path = os.path.join(self.root, vid, 'img', '00051'+ '.png')
             img = cv2.imread(img_path)
             return audio, lm, N, theta, mean, all_kp, index, img, vid
             
